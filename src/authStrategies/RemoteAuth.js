@@ -22,9 +22,10 @@ const BaseAuthStrategy = require('./BaseAuthStrategy');
  * @param {string} options.clientId - Client id to distinguish instances if you are using multiple, otherwise keep null if you are using only one instance
  * @param {string} options.dataPath - Change the default path for saving session files, default is: "./.wwebjs_auth/" 
  * @param {number} options.backupSyncIntervalMs - Sets the time interval for periodic session backups. Accepts values starting from 60000ms {1 minute}
+ * @param {number} options.initialBackupMs - Sets the time of first backup, this time is for await content load to backup. Accepts values starting from 60000ms {1 minute}
  */
 class RemoteAuth extends BaseAuthStrategy {
-    constructor({ clientId, dataPath, store, backupSyncIntervalMs } = {}) {
+    constructor({ clientId, dataPath, store, backupSyncIntervalMs, initialBackupMs = 60000 } = {}) {
         if (!fs && !unzipper && !archiver) throw new Error('Optional Dependencies [fs-extra, unzipper, archiver] are required to use RemoteAuth. Make sure to run npm install correctly and remove the --no-optional flag');
         super();
 
@@ -35,6 +36,11 @@ class RemoteAuth extends BaseAuthStrategy {
         if (!backupSyncIntervalMs || backupSyncIntervalMs < 60000) {
             throw new Error('Invalid backupSyncIntervalMs. Accepts values starting from 60000ms {1 minute}.');
         }
+
+        if (initialBackupMs < 60000) {
+            throw new Error('Invalid initialBackupMs. Accepts values starting from 60000ms {1 minute}.');
+        }
+
         if(!store) throw new Error('Remote database store is required.');
 
         this.store = store;
@@ -89,9 +95,9 @@ class RemoteAuth extends BaseAuthStrategy {
     async afterAuthReady() {
         const sessionExists = await this.store.sessionExists({session: this.sessionName});
         if(!sessionExists) {
-            await this.delay(60000); /* Initial delay sync required for session to be stable enough to recover */
+            await this.delay(initialBackupMs); /* Initial delay sync required for session to be stable enough to recover */
             await this.storeRemoteSession({emit: true});
-        }
+        } 
         var self = this;
         this.backupSync = setInterval(async function () {
             await self.storeRemoteSession();
