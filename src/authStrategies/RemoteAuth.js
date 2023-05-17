@@ -46,6 +46,7 @@ class RemoteAuth extends BaseAuthStrategy {
         this.store = store;
         this.clientId = clientId;
         this.backupSyncIntervalMs = backupSyncIntervalMs;
+        this.initialBackupMs = initialBackupMs;
         this.dataPath = path.resolve(dataPath || './.wwebjs_auth/');
         this.tempDir = `${this.dataPath}/wwebjs_temp_session`;
         this.requiredDirs = ['Default', 'IndexedDB', 'Local Storage']; /* => Required Files & Dirs in WWebJS to restore session */
@@ -95,7 +96,7 @@ class RemoteAuth extends BaseAuthStrategy {
     async afterAuthReady() {
         const sessionExists = await this.store.sessionExists({session: this.sessionName});
         if(!sessionExists) {
-            await this.delay(initialBackupMs); /* Initial delay sync required for session to be stable enough to recover */
+            await this.delay(this.initialBackupMs); /* Initial delay sync required for session to be stable enough to recover */
             await this.storeRemoteSession({emit: true});
         } 
         var self = this;
